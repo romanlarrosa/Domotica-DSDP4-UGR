@@ -21,7 +21,7 @@ var httpServer = http.createServer(
     function(request, response) {
         var uri = url.parse(request.url).pathname;
         if (uri=="/") {
-            uri = "cliente.html";
+            uri = "server.html";
         }
         var fname = path.join(process.cwd(), uri);
         fs.exists(fname, function(exists){
@@ -58,15 +58,42 @@ MongoClient.connect("mongodb://localhost:27017/datos_sensores", function(err, db
 
     var dbo = db.db("domotica");
 
-    db.createCollection("datos", function(err, collection) {
+    dbo.createCollection("datos", function(err, collection) {
         io.sockets.on('connection', function(client) {
+            //Cuando el cliente pone datos
             client.on('poner', function(data){
                 collection.insert(data, {safe:true}, function(err, result) {});
+                client.emit('obtener', data);
             });
+            //Obtener los datos del histórico
             client.on('obtener', function(data)  {
-                collection.find(data).toArray(function(err,results) {
+                collection.find().toArray(function(err,results) {
                     client.emit('obtener', results);
                 });
+            });
+            //El cliente cambia el valor de la luz
+            client.on('boton_luz', function(data){
+                console.log(data);
+                collection.insert(data, {safe:true}, function(err, result) {});
+                client.emit('obtener', data);
+            });
+
+            //El cliente cambia el valor de la temperatura
+            client.on('boton_temperatura', function(data){
+                collection.insert(data, {safe:true}, function(err, result) {});
+                client.emit('obtener', data);
+            });
+
+            //El cliente cambia el estado de la persiana
+            client.on('persiana', function(data){
+                collection.insert(data, {safe:true}, function(err, result) {});
+                client.emit('obtener', data);
+            });
+
+            //El cliente cambia el estado del aire
+            client.on('aire', function(data){
+                collection.insert(data, {safe:true}, function(err, result) {});
+                client.emit('obtener', data);
             });
         });
     });

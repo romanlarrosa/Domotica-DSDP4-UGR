@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOMOTICA</title>
+</head>
+<body>
+    
+    <div id=sensores>
+        <input id="nivel_luz">
+        <button id="boton_luz">CAMBIAR NIVEL LUZ</button>
+        <br>
+        <input id="temperatura">
+        <button id="boton_temperatura">CAMBIAR TEMPERATURA</button>
+
+        <br>
+        <button id="boton_persiana" value="subir_persiana">SUBIR PERSIANA</button>
+        <br>
+        <button id="boton_aire" value="encender_aire">ENCENDER AIRE</button>
+
+
+    </div>
+    <div id="alarmas">
+
+
+    </div>
+    
+    <ul id="resultados">
+
+    </ul>
+    
+</body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+
+        //Añadir la información a los resultados
+        function actualizarLista(datos){
+            var lista = document.getElementById("resultados");
+
+            if(datos.length > 0){
+                for (let i = 0; i < datos.length; i++) {
+                    var item = document.createElement('li');
+                    item.innerHTML = JSON.stringify(datos[i]);
+                    lista.appendChild(item);
+                }
+            } else {
+                var item = document.createElement('li');
+                    item.innerHTML = JSON.stringify(datos);
+                    lista.appendChild(item);
+            }
+            
+        }
+
+        var boton_luz = document.getElementById('boton_luz');
+        var boton_temperatura = document.getElementById('boton_temperatura');
+        var boton_persiana = document.getElementById('boton_persiana');
+        var boton_aire = document.getElementById('boton_aire');
+
+        var serviceURL = document.URL;
+        var socket = io.connect(serviceURL);
+
+        socket.emit('obtener');
+
+        //Cada vez que el servidor nos mande información se añade a la lista de resultados
+        socket.on('obtener', function(data){
+            actualizarLista(data);
+        });
+
+        //Mandar el nuevo valor de luz
+        boton_luz.onclick = function() {
+            var d = new Date();
+            var nivel_luz = document.getElementById('nivel_luz').value;
+            socket.emit('boton_luz', {nivel_luz:nivel_luz, date:d});
+        }
+
+        //Mandar un nuevo valor de temperatura
+        boton_temperatura.onclick = function() {
+            var d = new Date();
+            var temperatura = document.getElementById('temperatura').value;
+            socket.emit('boton_temperatura', {temperatura:temperatura, date:d});
+        }
+
+        //Accionar la persiana
+        boton_persiana.onclick = function() {
+            var d = new Date();
+            var accion = document.getElementById('boton_persiana').value;
+            socket.emit('persiana', {accion:accion, date:d});
+
+            if(boton_persiana.innerText == "SUBIR PERSIANA"){
+                boton_persiana.innerText = "CERRAR PERSIANA"
+                boton_persiana.value = "cerrar_persiana";
+            }
+            else {
+                boton_persiana.innerText = "SUBIR PERSIANA"
+                boton_persiana.value = "subir_persiana";
+            }
+        }
+
+        //Accionar el aire
+        boton_aire.onclick = function() {
+            var d = new Date();
+            var accion = document.getElementById('boton_aire').value;
+            socket.emit('aire', {accion:accion, date:d});
+
+            if(boton_aire.innerText == "ENCENDER AIRE"){
+                boton_aire.innerText = "APAGAR AIRE"
+                boton_aire.value = "apagar_aire";
+            }
+            else {
+                boton_aire.innerText = "ENCENDER AIRE"
+                boton_aire.value = "encender_aire";
+            }
+        }
+
+
+
+        
+
+        
+    
+    
+    </script>
+</html>
