@@ -8,12 +8,6 @@ var MongoClient = require('mongodb').MongoClient;
 var MongoServer = require('mongodb').Server;
 var mimeTypes = { "html": "text/html", "jpeg": "image/jpeg", "jpg": "image/jpeg", "png": "image/png", "js": "text/javascript", "css": "text/css", "swf": "application/x-shockwave-flash"};
 
-//Sensores
-/*
-var persiana = 'arriba';
-var aire = 'on';
-var luces = 'on';
-*/
 
 
 //html que sirve el servidor
@@ -60,11 +54,6 @@ MongoClient.connect("mongodb://localhost:27017/datos_sensores", function(err, db
 
     dbo.createCollection("datos", function(err, collection) {
         io.sockets.on('connection', function(client) {
-            //Cuando el cliente pone datos
-            client.on('poner', function(data){
-                collection.insert(data, {safe:true}, function(err, result) {});
-                client.emit('obtener', data);
-            });
             //Obtener los datos del histórico
             client.on('obtener', function(data)  {
                 collection.find().toArray(function(err,results) {
@@ -73,27 +62,39 @@ MongoClient.connect("mongodb://localhost:27017/datos_sensores", function(err, db
             });
             //El cliente cambia el valor de la luz
             client.on('boton_luz', function(data){
-                console.log(data);
                 collection.insert(data, {safe:true}, function(err, result) {});
-                client.emit('obtener', data);
+                io.sockets.emit('obtener', data);
             });
 
             //El cliente cambia el valor de la temperatura
             client.on('boton_temperatura', function(data){
                 collection.insert(data, {safe:true}, function(err, result) {});
-                client.emit('obtener', data);
+                io.sockets.emit('obtener', data);
             });
 
             //El cliente cambia el estado de la persiana
             client.on('persiana', function(data){
                 collection.insert(data, {safe:true}, function(err, result) {});
-                client.emit('obtener', data);
+                io.sockets.emit('obtener', data);
             });
 
             //El cliente cambia el estado del aire
             client.on('aire', function(data){
                 collection.insert(data, {safe:true}, function(err, result) {});
-                client.emit('obtener', data);
+                io.sockets.emit('obtener', data);
+            });
+
+            //El agente lanza una alarma
+            client.on('alarma', function(data){
+                //Enviar la alarma
+                io.sockets.emit('alarma', data);
+            });
+
+            //El agente hace algo automáticamente
+            client.on('automatico', function(data){
+                //Enviar la acción
+                io.sockets.emit('automatico', data);
+                console.log("AUTO: " + JSON.stringify(data));
             });
         });
     });

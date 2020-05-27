@@ -1,11 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AGENTE</title>
 </head>
+
 <body>
-    
+    <div id=sensores>
+        LUZ:<br>
+        <input id="max_luz" value="25">
+        <button id="boton_luz">CAMBIAR MAXIMO</button>
+        <br>
+        TEMP:<br>
+        <input id="max_temp" value="25">
+        <button id="boton_temperatura">CAMBIAR MAXIMO</button>
+
+    </div>
+    <div id="alarmas">
+
+
+    </div>
+
+    <ul id="resultados">
+
+    </ul>
+
 </body>
+<script src="/socket.io/socket.io.js"></script>
+<script type="text/javascript">
+
+    function cargarDatos(datos) {
+        for (let i = 0; i < datos.length; i++) {
+            actualizarDatos(datos[i], false);
+        }
+    }
+
+    function actualizarDatos(data, alarma) {
+        //Controlar cuando la persiana se abre o se cierra
+        switch (data.accion) {
+            case "bajar_persiana":
+                estado_persiana = "bajada";
+                break;
+            case "subir_persiana":
+                estado_persiana = "subida";
+                break;
+            case "apagar_aire":
+                estado_aire = "off";
+                break;
+            case "encender_aire":
+                estado_aire = "on";
+                break;
+        }
+
+        //Controlar temperatura
+        if (data['temperatura']) {
+            temp = data['temperatura'];
+        }
+
+        //Controlar luz
+        if (data['nivel_luz']) {
+            luz = data['nivel_luz'];
+        }
+
+        //console.log("->" + luz + " " + temp + " " + estado_aire + " " + estado_persiana);
+        if(alarma){
+           var alarmas = new Array();
+            //Si temperatura es mayor que umbral, alarma de temperatura
+            if (temp > max_temp) {
+                socket.emit('alarma', { alarma: "Temperatura supera la máxima permitida" });
+            }
+            //Si luz es mayor que umbral, alarma de luz
+            if (luz > max_luz) {
+                socket.emit('alarma', { alarma: "Luz supera la máxima permitida" });
+            }
+
+            //Si temperatura y luz mayor que umbral, bajar persiana automáticamente
+            if (temp > max_temp && luz > max_luz && estado_persiana=="subida") {
+                console.log("AUTO: bajar persiana");
+                socket.emit('automatico', { accion:"bajar_persiana" });
+            }
+            
+            //Si la temperatura es inferior que el umbral y el nivel de luz es menor que 10, se sube la persiana
+            if (temp < max_temp && luz < 10 && estado_persiana=="bajada") {
+                console.log("AUTO: subir persiana");
+                socket.emit('automatico', { accion:"subir_persiana" });
+            }
+
+            //Si la temperatura es inferior al umbral, el aire esta encendido, y la persiana subida, se apaga el aire
+            if (temp < max_temp && estado_aire=="on" && estado_persiana=="subida") {
+                console.log("AUTO: apagar aire");
+                socket.emit('automatico', { accion:"apagar_aire" });
+            }
+        }
+        
+
+    }
+
+    var max_luz = 25;
+    var max_temp = 25;
+
+    var luz = 0;
+    var temp = 0;
+    var estado_persiana = "bajada";
+    var estado_aire = "off";
+
+    var serviceURL = 'localhost:8080';
+    var socket = io.connect(serviceURL);
+
+    socket.emit('obtener');
+
+    socket.on('obtener', function (data) {
+
+        if (data.length > 0) {
+            cargarDatos(data);
+        }
+        else {
+            actualizarDatos(data, true);
+        }
+
+    });
+
+
+</script>
+
 </html>

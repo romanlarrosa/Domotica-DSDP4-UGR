@@ -21,9 +21,21 @@
 
 
     </div>
-    <div id="alarmas">
+    <div id="info">
+        Temperatura: <span id="s_temp">?</span><br>
+        Nivel de luz: <span id="s_luz">?</span><br>
+        Persiana: <span id="s_persiana">?</span><br>
+        Aire Acondicionado: <span id="s_aire">?</span><br>
+
+    </div>
+
+    <div>
+        <br><br>
+        <ul id="alarmas">
 
 
+        </ul>
+        <br><br>
     </div>
     
     <ul id="resultados">
@@ -34,8 +46,37 @@
     <script src="/socket.io/socket.io.js"></script>
     <script type="text/javascript">
 
-        //Añadir la información a los resultados
+
+        function actualizarDatos(datos){
+            switch (datos.accion) {
+                case "bajar_persiana":
+                    s_persiana.innerHTML = "bajada";
+                    break;
+                case "subir_persiana":
+                    s_persiana.innerHTML = "subida";
+                    break;
+                case "apagar_aire":
+                s_aire.innerHTML = "off";
+                    break;
+                case "encender_aire":
+                    s_aire.innerHTML = "on";
+                    break;
+            }
+
+            //Controlar temperatura
+            if (datos['temperatura']){
+                s_temp.innerHTML = datos['temperatura'];
+            }
+
+            //Controlar luz
+            if (datos['nivel_luz']){
+                s_luz.innerHTML =  datos['nivel_luz'];        
+            }
+        }
+
         function actualizarLista(datos){
+        
+
             var lista = document.getElementById("resultados");
 
             if(datos.length > 0){
@@ -43,19 +84,69 @@
                     var item = document.createElement('li');
                     item.innerHTML = JSON.stringify(datos[i]);
                     lista.appendChild(item);
+
+                    actualizarDatos(datos[i]);
+
+                    
                 }
             } else {
                 var item = document.createElement('li');
                     item.innerHTML = JSON.stringify(datos);
                     lista.appendChild(item);
+                    actualizarDatos(datos);
             }
             
         }
 
+        function addAlarma(datos){
+             var item = document.createElement('li');
+             item.innerHTML = JSON.stringify(datos);
+             alarmas.appendChild(item);
+
+        }
+
+        function automatizar(datos){
+            var d = new Date();
+            switch (datos.accion) {
+                case "bajar_persiana":
+                    s_persiana.innerHTML = "bajada";
+                    boton_persiana.innerText = "SUBIR PERSIANA"
+                    boton_persiana.value = "subir_persiana";
+                    socket.emit('persiana', {accion:"bajar_persiana", auto:true, date:d});
+                    
+                    break;
+                case "subir_persiana":
+                    s_persiana.innerHTML = "subida";
+                    boton_persiana.innerText = "BAJAR PERSIANA"
+                    boton_persiana.value = "bajar_persiana";
+                    socket.emit('persiana', {accion:"subir_persiana", auto:true, date:d});
+
+                    break;
+                case "apagar_aire":
+                    s_aire.innerHTML = "off";
+                    boton_aire.innerText = "ENCENDER AIRE"
+                    boton_aire.value = "encender_aire";
+                    socket.emit('persiana', {accion:"apagar_aire", auto:true, date:d});
+                    break;
+                case "encender_aire":
+                    s_aire.innerHTML = "on";
+                    break;
+            }
+
+        }
+
+        //Botones
         var boton_luz = document.getElementById('boton_luz');
         var boton_temperatura = document.getElementById('boton_temperatura');
         var boton_persiana = document.getElementById('boton_persiana');
         var boton_aire = document.getElementById('boton_aire');
+
+        //Textos
+        var s_temp = document.getElementById('s_temp');
+        var s_luz = document.getElementById('s_luz');
+        var s_persiana = document.getElementById('s_persiana');
+        var s_aire = document.getElementById('s_aire');
+        var alarmas = document.getElementById('alarmas');
 
         var serviceURL = document.URL;
         var socket = io.connect(serviceURL);
@@ -64,7 +155,21 @@
 
         //Cada vez que el servidor nos mande información se añade a la lista de resultados
         socket.on('obtener', function(data){
+            //Eliminar alarmas
+            alarmas.innerHTML = "";
             actualizarLista(data);
+        });
+
+        //El servidor envia las alarmas del agente
+        socket.on('alarma', function(data){
+            //console.log("Alarma: " + JSON.stringify(data));
+            addAlarma(data);
+        });
+
+        //El servidor envia acciones automáticas
+        socket.on('automatico', function(data){
+            console.log("AUTO: " + JSON.stringify(data));
+            automatizar(data);
         });
 
         //Mandar el nuevo valor de luz
@@ -88,8 +193,8 @@
             socket.emit('persiana', {accion:accion, date:d});
 
             if(boton_persiana.innerText == "SUBIR PERSIANA"){
-                boton_persiana.innerText = "CERRAR PERSIANA"
-                boton_persiana.value = "cerrar_persiana";
+                boton_persiana.innerText = "BAJAR PERSIANA"
+                boton_persiana.value = "bajar_persiana";
             }
             else {
                 boton_persiana.innerText = "SUBIR PERSIANA"
